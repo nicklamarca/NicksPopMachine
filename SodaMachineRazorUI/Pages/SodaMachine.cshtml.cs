@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Claims;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using SodaMachineLibrary.Logic;
@@ -9,6 +11,7 @@ using SodaMachineLibrary.Models;
 
 namespace SodaMachineRazorUI
 {
+    [Authorize]
     public class SodaMachineModel : PageModel
     {
         private readonly ISodaMachineLogic _sodaMachine;
@@ -23,7 +26,7 @@ namespace SodaMachineRazorUI
         [BindProperty]
         public SodaModel SelectedSoda { get; set; }
 
-        [BindProperty(SupportsGet = true)]
+        //[BindProperty(SupportsGet = true)]
         public string UserId { get; set; }
 
         [BindProperty(SupportsGet = true)]
@@ -41,7 +44,8 @@ namespace SodaMachineRazorUI
         {
             if (string.IsNullOrWhiteSpace(UserId))
             {
-                UserId = Guid.NewGuid().ToString();
+                //UserId = Guid.NewGuid().ToString();
+                UserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             }
 
             SodaPrice = _sodaMachine.GetSodaPrice();
@@ -52,17 +56,22 @@ namespace SodaMachineRazorUI
         // Used for depositing coins
         public IActionResult OnPost()
         {
+            UserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
             if (Deposit > 0)
             {
                 _sodaMachine.MoneyInserted(UserId, Deposit);
             }
 
-            return RedirectToPage(new { UserId });
+            //return RedirectToPage(new { UserId });
+            return RedirectToPage();
         }
 
         // Used for requesting soda
         public IActionResult OnPostSoda()
         {
+            UserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
             var results = _sodaMachine.RequestSoda(SelectedSoda, UserId);
             OutputText = "";
 
@@ -86,18 +95,22 @@ namespace SodaMachineRazorUI
                 }
             }
 
-            return RedirectToPage(new { UserId, ErrorMessage, OutputText });
+            //return RedirectToPage(new { UserId, ErrorMessage, OutputText });
+            return RedirectToPage(new { ErrorMessage, OutputText });
         }
 
         // Used for cancelling our deposit
         public IActionResult OnPostCancel()
         {
+            UserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
             DepositedAmount = _sodaMachine.GetMoneyInsertedTotal(UserId);
             _sodaMachine.IssueFullRefund(UserId);
 
             OutputText = $"You have been refunded { String.Format("{0:C}", DepositedAmount) }";
 
-            return RedirectToPage(new { UserId, OutputText });
+            //return RedirectToPage(new { UserId, OutputText });
+            return RedirectToPage(new { OutputText });
         }
     }
 }
